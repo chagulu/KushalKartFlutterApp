@@ -1,0 +1,22 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future<void> verifyOtp(String phone, String otp) async {
+  final url = Uri.parse('$baseUrl/api/auth/verify-otp');
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'phone': phone, 'otp': otp}),
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    print('✅ API Response: $data');
+
+    // Example: Access token
+    final token = data['token'];
+    print('🔐 JWT Token: $token');
+  } else {
+    print('❌ Error ${response.statusCode}: ${response.body}');
+  }
+}

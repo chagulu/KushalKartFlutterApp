@@ -1,0 +1,12 @@
+name: kushal_kart_flutter_app
+description: A Flutter application.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.6
+  shared_preferences: ^2.2.2  # ✅ Add this line
