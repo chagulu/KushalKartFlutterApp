@@ -21,6 +21,14 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
 
+      if (token == null || token.isEmpty) {
+        setState(() {
+          _errorMessage = 'No token found. Please login again.';
+          _isLoading = false;
+        });
+        return;
+      }
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/services/by-location'),
         headers: {
@@ -50,6 +58,24 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
     }
   }
 
+  void handleMenuSelection(String value) {
+    switch (value) {
+      case 'booking':
+        print('🧾 My Booking tapped');
+        break;
+      case 'transaction':
+        print('💳 My Transaction tapped');
+        break;
+      case 'profile':
+        print('👤 Profile tapped');
+        break;
+      case 'logout':
+        print('🚪 Logout tapped');
+        // Optionally clear token and navigate to login
+        break;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,22 +85,100 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Available Services')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-              ? Center(child: Text(_errorMessage))
-              : ListView.builder(
-                  itemCount: services.length,
-                  itemBuilder: (context, index) {
-                    final service = services[index];
-                    return ListTile(
-                      title: Text(service['categoryName']),
-                      subtitle: Text('Pincode: ${service['userPincode']}'),
-                      trailing: Text('Workers: ${service['availableWorkersCount']}'),
-                    );
-                  },
+      appBar: AppBar(
+        title: const Text('Available Services'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: handleMenuSelection,
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'booking',
+                child: Row(
+                  children: const [
+                    Icon(Icons.event_available, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('My Booking'),
+                  ],
                 ),
+              ),
+              PopupMenuItem(
+                value: 'transaction',
+                child: Row(
+                  children: const [
+                    Icon(Icons.receipt_long, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('My Transaction'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: const [
+                    Icon(Icons.person, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Profile'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: const [
+                    Icon(Icons.logout, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFE1F5FE), Color(0xFFB3E5FC)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage.isNotEmpty
+                ? Center(
+                    child: Text(
+                      _errorMessage,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: services.length,
+                    itemBuilder: (context, index) {
+                      final service = services[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          title: Text(
+                            service['categoryName'],
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text('Pincode: ${service['userPincode']}'),
+                          trailing: Text(
+                            'Workers: ${service['availableWorkersCount']}',
+                            style: const TextStyle(color: Colors.blueAccent),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }
