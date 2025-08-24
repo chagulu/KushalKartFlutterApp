@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
+import 'package:kushal_kart_flutter_app/MybookingPage.dart';
 
 class ServiceListingPage extends StatefulWidget {
   const ServiceListingPage({Key? key}) : super(key: key);
@@ -59,22 +60,25 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
   }
 
   void handleMenuSelection(String value) {
-    switch (value) {
-      case 'booking':
-        print('🧾 My Booking tapped');
-        break;
-      case 'transaction':
-        print('💳 My Transaction tapped');
-        break;
-      case 'profile':
-        print('👤 Profile tapped');
-        break;
-      case 'logout':
-        print('🚪 Logout tapped');
-        // Optionally clear token and navigate to login
-        break;
-    }
+  switch (value) {
+    case 'booking':
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyBookingPage()),
+      );
+      break;
+    case 'transaction':
+      print('💳 My Transaction tapped');
+      break;
+    case 'profile':
+      print('👤 Profile tapped');
+      break;
+    case 'logout':
+      print('🚪 Logout tapped');
+      break;
   }
+}
+
 
   @override
   void initState() {
