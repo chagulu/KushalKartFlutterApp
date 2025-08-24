@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
 import 'package:kushal_kart_flutter_app/MybookingPage.dart';
 
+
 class ServiceListingPage extends StatefulWidget {
   const ServiceListingPage({Key? key}) : super(key: key);
 
@@ -31,7 +32,7 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/services/by-location'),
+        Uri.parse('$baseUrl/api/services/by-location/enriched'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -60,25 +61,24 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
   }
 
   void handleMenuSelection(String value) {
-  switch (value) {
-    case 'booking':
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const MyBookingPage()),
-      );
-      break;
-    case 'transaction':
-      print('💳 My Transaction tapped');
-      break;
-    case 'profile':
-      print('👤 Profile tapped');
-      break;
-    case 'logout':
-      print('🚪 Logout tapped');
-      break;
+    switch (value) {
+      case 'booking':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyBookingPage()),
+        );
+        break;
+      case 'transaction':
+        print('💳 My Transaction tapped');
+        break;
+      case 'profile':
+        print('👤 Profile tapped');
+        break;
+      case 'logout':
+        print('🚪 Logout tapped');
+        break;
+    }
   }
-}
-
 
   @override
   void initState() {
@@ -167,16 +167,19 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         elevation: 4,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          title: Text(
-                            service['categoryName'],
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text('Pincode: ${service['userPincode']}'),
-                          trailing: Text(
-                            'Workers: ${service['availableWorkersCount']}',
-                            style: const TextStyle(color: Colors.blueAccent),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                service['categoryName'] ?? 'Unnamed Category',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 8),
+                              Text('Price: ₹${service['defaultRate'] ?? 'N/A'}'),
+                              Text('Rating: ${service['averageRating'] ?? 'Not rated'}'),
+                            ],
                           ),
                         ),
                       );
@@ -186,3 +189,4 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
     );
   }
 }
+
