@@ -60,25 +60,58 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
     }
   }
 
-  void handleMenuSelection(String value) {
-    switch (value) {
-      case 'booking':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyBookingPage()),
+  void handleMenuSelection(String value) async {
+  switch (value) {
+    case 'booking':
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyBookingPage()),
+      );
+      break;
+
+    case 'transaction':
+      print('💳 My Transaction tapped');
+      break;
+
+    case 'profile':
+      print('👤 Profile tapped');
+      break;
+
+    case 'logout':
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null || token.isEmpty) {
+        print('⚠️ No token found.');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/logout'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🚪 Logout response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        await prefs.remove('jwt_token');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logout successful')),
         );
-        break;
-      case 'transaction':
-        print('💳 My Transaction tapped');
-        break;
-      case 'profile':
-        print('👤 Profile tapped');
-        break;
-      case 'logout':
-        print('🚪 Logout tapped');
-        break;
-    }
+        // Optionally navigate to login page or home
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logout failed: ${response.body}')),
+        );
+      }
+      break;
   }
+}
+
 
   @override
   void initState() {
