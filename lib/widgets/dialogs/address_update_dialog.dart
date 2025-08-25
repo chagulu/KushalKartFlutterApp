@@ -33,6 +33,23 @@ class _AddressUpdateDialogState extends State<AddressUpdateDialog> {
   }
 
   Future<void> fetchGoogleLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    print('📍 Permission status: $permission');
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+      print('📍 Permission after request: $permission');
+
+      if (permission != LocationPermission.always &&
+          permission != LocationPermission.whileInUse) {
+        print('❌ Location permission not granted');
+        setState(() => _isLoadingLocation = false);
+        _showPermissionDeniedDialog();
+        return;
+      }
+    }
+
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -41,7 +58,7 @@ class _AddressUpdateDialogState extends State<AddressUpdateDialog> {
       final lat = position.latitude;
       final lng = position.longitude;
 
-      final apiKey = 'AIzaSyBEC5zhJxznUsig1Xf2hSyiltoQ2Ja8SbM'; // 🔐 Replace with your actual key
+      final apiKey = 'AIzaSyBEC5zhJxznUsig1Xf2hSyiltoQ2Ja8SbM';
       final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey',
       );
@@ -50,16 +67,26 @@ class _AddressUpdateDialogState extends State<AddressUpdateDialog> {
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'OK') {
-        final components = data['results'][0]['address_components'];
+        final result = data['results'][0];
+        final components = result['address_components'];
+
+        final streetNumber = _extractComponent(components, 'street_number');
+        final route = _extractComponent(components, 'route');
+        final locality = _extractComponent(components, 'locality');
+        final state = _extractComponent(components, 'administrative_area_level_1');
+        final postalCode = _extractComponent(components, 'postal_code');
+
         setState(() {
           latController.text = lat.toString();
           lngController.text = lng.toString();
-          line1Controller.text = data['results'][0]['formatted_address'];
-          cityController.text = _extractComponent(components, 'locality');
-          stateController.text = _extractComponent(components, 'administrative_area_level_1');
-          pincodeController.text = _extractComponent(components, 'postal_code');
+          line1Controller.text = '$streetNumber $route'.trim();
+          cityController.text = locality;
+          stateController.text = state;
+          pincodeController.text = postalCode;
           _isLoadingLocation = false;
         });
+
+        print('📍 Prefilled Address: $streetNumber $route, $locality, $state, $postalCode');
       } else {
         setState(() => _isLoadingLocation = false);
         print('❌ Google Geocoding failed: ${data['status']}');
@@ -71,11 +98,30 @@ class _AddressUpdateDialogState extends State<AddressUpdateDialog> {
   }
 
   String _extractComponent(List components, String type) {
-    final match = components.firstWhere(
-      (c) => c['types'].contains(type),
-      orElse: () => null,
+    for (var c in components) {
+      if (c['types'] != null && c['types'].contains(type)) {
+        return c['long_name'] ?? '';
+      }
+    }
+    return '';
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Location Permission Required'),
+        content: const Text(
+          'To autofill your address, please allow location access in settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
-    return match != null ? match['long_name'] : '';
   }
 
   Future<void> submitAddress() async {
