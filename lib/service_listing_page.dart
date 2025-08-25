@@ -5,6 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
 import 'package:kushal_kart_flutter_app/MybookingPage.dart';
 import 'package:kushal_kart_flutter_app/ServiceDetailsPage.dart';
+import 'package:kushal_kart_flutter_app/MyTransactionPage.dart';
+import 'package:kushal_kart_flutter_app/AddressUpdatePage.dart';
+
+
 
 
 
@@ -72,12 +76,23 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
         break;
 
       case 'transaction':
-        print('💳 My Transaction tapped');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyTransactionPage()),
+        );
         break;
-
+      
       case 'profile':
         print('👤 Profile tapped');
         break;
+
+        case 'address':
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddressUpdatePage()),
+          );
+          break;
+
 
       case 'logout':
         final prefs = await SharedPreferences.getInstance();
@@ -126,62 +141,63 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
         title: const Text('Available Services'),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: handleMenuSelection,
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'booking',
-                child: Row(
-                  children: const [
-                    Icon(Icons.event_available, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('My Booking'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'transaction',
-                child: Row(
-                  children: const [
-                    Icon(Icons.receipt_long, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('My Transaction'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: const [
-                    Icon(Icons.person, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Profile'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                  value: 'address',
-                  child: Row(
-                    children: const [
-                      Icon(Icons.location_on, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('Update Address'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: const [
-                    Icon(Icons.logout, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Logout'),
-                  ],
-                ),
-              ),
-            ],
-          ),
+  icon: const Icon(Icons.more_vert),
+  onSelected: handleMenuSelection,
+  itemBuilder: (context) => [
+    PopupMenuItem(
+      value: 'booking',
+      child: Row(
+        children: const [
+          Icon(Icons.event_available, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('My Booking'),
+        ],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'transaction',
+      child: Row(
+        children: const [
+          Icon(Icons.receipt_long, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('My Transaction'),
+        ],
+      ),
+    ),
+    const PopupMenuDivider(),
+    PopupMenuItem(
+      value: 'profile',
+      child: Row(
+        children: const [
+          Icon(Icons.person, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Profile'),
+        ],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'address',
+      child: Row(
+        children: const [
+          Icon(Icons.location_on, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Update Address'),
+        ],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'logout',
+      child: Row(
+        children: const [
+          Icon(Icons.logout, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Logout'),
+        ],
+      ),
+    ),
+  ],
+),
+
         ],
       ),
       body: Container(
