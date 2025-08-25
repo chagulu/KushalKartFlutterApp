@@ -6,6 +6,8 @@ import 'package:kushal_kart_flutter_app/config.dart';
 import 'package:kushal_kart_flutter_app/MybookingPage.dart';
 import 'package:kushal_kart_flutter_app/ServiceDetailsPage.dart';
 
+
+
 class ServiceListingPage extends StatefulWidget {
   const ServiceListingPage({Key? key}) : super(key: key);
 
@@ -159,6 +161,16 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
                 ),
               ),
               PopupMenuItem(
+                  value: 'address',
+                  child: Row(
+                    children: const [
+                      Icon(Icons.location_on, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Update Address'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: const [
