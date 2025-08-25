@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
 import 'package:kushal_kart_flutter_app/MybookingPage.dart';
-
+import 'package:kushal_kart_flutter_app/ServiceDetailsPage.dart';
 
 class ServiceListingPage extends StatefulWidget {
   const ServiceListingPage({Key? key}) : super(key: key);
@@ -61,57 +61,55 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
   }
 
   void handleMenuSelection(String value) async {
-  switch (value) {
-    case 'booking':
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const MyBookingPage()),
-      );
-      break;
-
-    case 'transaction':
-      print('💳 My Transaction tapped');
-      break;
-
-    case 'profile':
-      print('👤 Profile tapped');
-      break;
-
-    case 'logout':
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-
-      if (token == null || token.isEmpty) {
-        print('⚠️ No token found.');
-        return;
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/logout'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      print('🚪 Logout response: ${response.body}');
-
-      if (response.statusCode == 200) {
-        await prefs.remove('jwt_token');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logout successful')),
+    switch (value) {
+      case 'booking':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyBookingPage()),
         );
-        // Optionally navigate to login page or home
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed: ${response.body}')),
+        break;
+
+      case 'transaction':
+        print('💳 My Transaction tapped');
+        break;
+
+      case 'profile':
+        print('👤 Profile tapped');
+        break;
+
+      case 'logout':
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('jwt_token');
+
+        if (token == null || token.isEmpty) {
+          print('⚠️ No token found.');
+          return;
+        }
+
+        final response = await http.post(
+          Uri.parse('$baseUrl/auth/logout'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
         );
-      }
-      break;
+
+        print('🚪 Logout response: ${response.body}');
+
+        if (response.statusCode == 200) {
+          await prefs.remove('jwt_token');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logout successful')),
+          );
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Logout failed: ${response.body}')),
+          );
+        }
+        break;
+    }
   }
-}
-
 
   @override
   void initState() {
@@ -196,23 +194,38 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
                     itemCount: services.length,
                     itemBuilder: (context, index) {
                       final service = services[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                service['categoryName'] ?? 'Unnamed Category',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      return GestureDetector(
+                        onTap: () {
+                          final serviceId = service['id'];
+                          final workerId = 1; // You can make this dynamic later
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ServiceDetailsPage(
+                                serviceId: serviceId,
+                                workerId: workerId,
                               ),
-                              const SizedBox(height: 8),
-                              Text('Price: ₹${service['defaultRate'] ?? 'N/A'}'),
-                              Text('Rating: ${service['averageRating'] ?? 'Not rated'}'),
-                            ],
+                            ),
+                          );
+                        },
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  service['categoryName'] ?? 'Unnamed Category',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                const SizedBox(height: 8),
+                                Text('Price: ₹${service['defaultRate'] ?? 'N/A'}'),
+                                Text('Rating: ${service['averageRating'] ?? 'Not rated'}'),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -222,4 +235,3 @@ class _ServiceListingPageState extends State<ServiceListingPage> {
     );
   }
 }
-
