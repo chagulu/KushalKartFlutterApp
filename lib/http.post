@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> verifyOtp(String phone, String otp) async {
+Future<void> verifyOtp(BuildContext context, String phone, String otp) async {
   final url = Uri.parse('$baseUrl/api/auth/verify-otp');
   final response = await http.post(
     url,
@@ -13,10 +15,30 @@ Future<void> verifyOtp(String phone, String otp) async {
     final data = jsonDecode(response.body);
     print('✅ API Response: $data');
 
-    // Example: Access token
     final token = data['token'];
     print('🔐 JWT Token: $token');
+
+    // Save token if needed
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('jwt_token', token);
   } else {
-    print('❌ Error ${response.statusCode}: ${response.body}');
+    final body = jsonDecode(response.body);
+    final errorCode = body['errorCode'];
+
+    if (response.statusCode == 401 && errorCode == 'TOKEN_EXPIRED') {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('jwt_token');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session expired. Please log in again.')),
+      );
+
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+    } else {
+      print('❌ Error ${response.statusCode}: ${response.body}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${body['message']}')),
+      );
+    }
   }
 }
