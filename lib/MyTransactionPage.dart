@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
+import 'package:kushal_kart_flutter_app/widgets/kushal_bottom_nav.dart';
 
 class MyTransactionPage extends StatefulWidget {
   const MyTransactionPage({Key? key}) : super(key: key);
@@ -110,6 +111,10 @@ class _MyTransactionPageState extends State<MyTransactionPage> {
                       );
                     },
                   ),
+      ),
+      bottomNavigationBar: KushalBottomNav(
+        currentIndex: 1, // Transactions tab
+        context: context,
       ),
     );
   }

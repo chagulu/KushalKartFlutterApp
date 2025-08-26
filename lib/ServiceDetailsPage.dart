@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
+import 'package:kushal_kart_flutter_app/widgets/kushal_bottom_nav.dart';
 
 class ServiceDetailsPage extends StatefulWidget {
   final int serviceId;
@@ -180,6 +181,10 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                       ),
                     ),
                   ),
+      ),
+      bottomNavigationBar: KushalBottomNav(
+        currentIndex: 2, // Services tab
+        context: context,
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kushal_kart_flutter_app/config.dart';
+import 'package:kushal_kart_flutter_app/widgets/kushal_bottom_nav.dart';
 
 class MyBookingPage extends StatefulWidget {
   const MyBookingPage({Key? key}) : super(key: key);
@@ -120,6 +121,10 @@ class _MyBookingPageState extends State<MyBookingPage> {
                       );
                     },
                   ),
+      ),
+      bottomNavigationBar: KushalBottomNav(
+        currentIndex: 0, // Booking tab
+        context: context,
       ),
     );
   }
