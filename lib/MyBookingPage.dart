@@ -14,57 +14,129 @@ class MyBookingPage extends StatefulWidget {
 }
 
 class _MyBookingPageState extends State<MyBookingPage> {
-  List<dynamic> bookings = [];
-  bool _isLoading = true;
+  final _controller = ScrollController();
+  final List<dynamic> _bookings = [];
+
+  // Pagination
+  int _page = 0; // starts at 0; the API also supports page=1,2,... we increment accordingly
+  final int _size = 10; // page size = 10
+  bool _isInitialLoading = true;
+  bool _isLoadingMore = false;
+  bool _isLastPage = false;
   String _errorMessage = '';
 
-  Future<void> fetchBookings() async {
+  // Optional: to prevent duplicate pay taps
+  int? _payingBookingId;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onScroll);
+    _fetchPage(reset: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onScroll);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLastPage || _isLoadingMore || _isInitialLoading) return;
+    if (!_controller.hasClients) return;
+    final position = _controller.position;
+    const threshold = 200.0;
+    if (position.pixels >= position.maxScrollExtent - threshold) {
+      _fetchPage();
+    }
+  }
+
+  Future<void> _fetchPage({bool reset = false}) async {
     try {
+      if (reset) {
+        setState(() {
+          _page = 0;
+          _isLastPage = false;
+          _errorMessage = '';
+          _isInitialLoading = true;
+          _bookings.clear();
+        });
+      } else {
+        setState(() => _isLoadingMore = true);
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-
       if (token == null || token.isEmpty) {
         setState(() {
           _errorMessage = 'No token found. Please login again.';
-          _isLoading = false;
+          _isInitialLoading = false;
+          _isLoadingMore = false;
         });
         return;
       }
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/mine?status=PENDING&page=0&size=1000'),
-        headers: {'Authorization': 'Bearer $token'},
+      // If the backend accepts page=1..N, use (_page + 1) below; otherwise keep 0-based.
+      final currentPageForApi = _page; // change to (_page + 1) if API is 1-based
+      final uri = Uri.parse(
+        '$baseUrl/api/bookings/mine?status=PENDING&page=$currentPageForApi&size=$_size',
       );
+      final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final List<dynamic> content = (body['content'] as List?) ?? [];
+        final bool lastFlag = body['last'] == true;
+
         setState(() {
-          bookings = (data['content'] as List?) ?? [];
-          _isLoading = false;
+          _bookings.addAll(content);
+          _isLastPage = lastFlag || content.length < _size;
+          if (!_isLastPage) _page += 1;
+          _isInitialLoading = false;
+          _isLoadingMore = false;
         });
       } else {
         setState(() {
-          _errorMessage = 'Failed: ${response.body}';
-          _isLoading = false;
+          _errorMessage = 'Failed: ${res.body}';
+          _isInitialLoading = false;
+          _isLoadingMore = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Error: $e';
-        _isLoading = false;
+        _isInitialLoading = false;
+        _isLoadingMore = false;
       });
     }
   }
 
-  String formatDate(String dateTimeStr) {
+  Future<void> _refresh() async {
+    await _fetchPage(reset: true);
+  }
+
+  String _formatDate(String dateTimeStr) {
     final dateTime = DateTime.parse(dateTimeStr);
     return DateFormat('EEE, dd MMM yyyy • hh:mm a').format(dateTime);
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchBookings();
+  // Simulate pay flow trigger (replace with real navigation or API)
+  Future<void> _onPayNow(dynamic booking) async {
+    final id = booking['id'] as int?;
+    if (id == null) return;
+    setState(() => _payingBookingId = id);
+    try {
+      // TODO: Navigate to payment screen or call payment intent API
+      // For example: Navigator.pushNamed(context, '/checkout', arguments: booking);
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Redirecting to payment...')),
+      );
+    } finally {
+      if (mounted) setState(() => _payingBookingId = null);
+    }
   }
 
   @override
@@ -74,7 +146,7 @@ class _MyBookingPageState extends State<MyBookingPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('My bookings'), centerTitle: true),
       body: RefreshIndicator(
-        onRefresh: fetchBookings,
+        onRefresh: _refresh,
         child: _buildBody(theme),
       ),
       bottomNavigationBar: KushalBottomNav(currentIndex: 0, context: context),
@@ -82,10 +154,11 @@ class _MyBookingPageState extends State<MyBookingPage> {
   }
 
   Widget _buildBody(ThemeData theme) {
-    if (_isLoading) {
+    if (_isInitialLoading) {
       return ListView.builder(
-        padding: const EdgeInsets.all(16),
+        controller: _controller,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
         itemCount: 6,
         itemBuilder: (_, __) => const _BookingSkeleton(),
       );
@@ -93,8 +166,9 @@ class _MyBookingPageState extends State<MyBookingPage> {
 
     if (_errorMessage.isNotEmpty) {
       return ListView(
-        padding: const EdgeInsets.all(24),
+        controller: _controller,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
         children: [
           Center(
             child: Column(
@@ -106,7 +180,7 @@ class _MyBookingPageState extends State<MyBookingPage> {
                 const SizedBox(height: 8),
                 Text(_errorMessage, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
-                FilledButton.icon(onPressed: fetchBookings, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+                FilledButton.icon(onPressed: () => _fetchPage(reset: true), icon: const Icon(Icons.refresh), label: const Text('Retry')),
               ],
             ),
           ),
@@ -114,10 +188,11 @@ class _MyBookingPageState extends State<MyBookingPage> {
       );
     }
 
-    if (bookings.isEmpty) {
+    if (_bookings.isEmpty) {
       return ListView(
-        padding: const EdgeInsets.all(24),
+        controller: _controller,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
         children: [
           Center(
             child: Column(
@@ -136,102 +211,105 @@ class _MyBookingPageState extends State<MyBookingPage> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      controller: _controller,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: bookings.length,
+      primary: false,
+      padding: const EdgeInsets.all(16),
+      itemCount: _bookings.length + (_isLoadingMore ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final b = bookings[index];
+        if (_isLoadingMore && index == _bookings.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+
+        final b = _bookings[index];
         final address = b['address'] ?? 'No address provided';
-        final status = (b['status'] ?? 'UNKNOWN').toString();
-        final payment = (b['paymentStatus'] ?? 'UNKNOWN').toString();
-        final scheduled = b['scheduledTime'] != null ? formatDate(b['scheduledTime']) : '—';
+        final bookingStatus = (b['status'] ?? 'UNKNOWN').toString(); // booking status
+        final paymentStatus = (b['paymentStatus'] ?? 'UNKNOWN').toString(); // payment status
+        final scheduled = b['scheduledTime'] != null ? _formatDate(b['scheduledTime']) : '—';
 
-        final statusColor = _statusColor(status, theme);
-        final paymentColor = _paymentColor(payment, theme);
+        final isPaymentPending = paymentStatus.toUpperCase() == 'PENDING';
+        final isBookingPending = bookingStatus.toUpperCase() == 'PENDING';
 
-        final tile = Card.outlined(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            leading: CircleAvatar(
-              radius: 22,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(Icons.event_note, color: theme.colorScheme.onPrimaryContainer),
-            ),
-            title: Text(address, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        return Card.outlined(
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  child: Padding(
+    padding: const EdgeInsets.all(12), // uniform padding fixes tight fits
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start, // prevent bottom overflow
+      children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: Icon(Icons.event_note, color: theme.colorScheme.onPrimaryContainer),
+        ),
+        const SizedBox(width: 12),
+        // Content column expands and wraps
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                address,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              // Badges wrap to new line as needed
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _Badge(label: status, color: statusColor),
-                      _Badge(label: payment, color: paymentColor),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.schedule, size: 16),
-                      const SizedBox(width: 6),
-                      Text(scheduled, style: theme.textTheme.bodyMedium),
-                    ],
+                  _Badge(label: 'Booking: $bookingStatus', color: _bookingColor(bookingStatus, theme)),
+                  _Badge(label: 'Payment: $paymentStatus', color: _paymentColor(paymentStatus, theme)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.schedule, size: 16),
+                  const SizedBox(width: 6),
+                  Flexible( // prevent row overflow on narrow screens
+                    child: Text(
+                      scheduled,
+                      style: theme.textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // Navigate to booking detail if exists
-            },
+            ],
           ),
-        );
-
-        // Optional swipe actions for eligible statuses only.
-        final canCancel = status.toUpperCase() == 'PENDING';
-        if (!canCancel) return tile;
-
-        return Dismissible(
-          key: ValueKey(b['id'] ?? index),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(16),
+        ),
+        const SizedBox(width: 8),
+        // Trailing kept compact; use SizedBox constraints
+        if (isPaymentPending)
+          ConstrainedBox(
+            constraints: const BoxConstraints.tightFor(width: 110, height: 36),
+            child: FilledButton.tonalIcon(
+              onPressed: _payingBookingId == b['id'] ? null : () => _onPayNow(b),
+              icon: _payingBookingId == b['id']
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.payment, size: 18),
+              label: const Text('Pay now', overflow: TextOverflow.ellipsis),
             ),
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Icon(Icons.cancel, color: theme.colorScheme.onErrorContainer),
-          ),
-          confirmDismiss: (_) async {
-            return await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Cancel booking?'),
-                content: const Text('This action cannot be undone.'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep')),
-                  FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cancel')),
-                ],
-              ),
-            );
-          },
-          onDismissed: (_) {
-            // TODO: call cancel API, then remove locally
-            setState(() => bookings.removeAt(index));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking cancelled')));
-          },
-          child: tile,
-        );
+          )
+        else
+          const Icon(Icons.chevron_right),
+      ],
+    ),
+  ),
+);
       },
     );
   }
 
-  Color _statusColor(String status, ThemeData theme) {
+  Color _bookingColor(String status, ThemeData theme) {
     switch (status.toUpperCase()) {
       case 'PENDING':
         return theme.colorScheme.secondaryContainer;
@@ -277,10 +355,7 @@ class _Badge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium,
-      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
   }
 }
